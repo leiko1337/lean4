@@ -57,6 +57,13 @@ void check_heartbeat() {
 LEAN_THREAD_VALUE(size_t, g_max_rec_depth, 0);
 LEAN_THREAD_VALUE(size_t, g_rec_depth, 0);
 
+/*
+Multiplier for the previously elab-only `maxRecDepth` to also be usable for the kernel without
+significant regressions. As there is no inherent meaning to a specific absolute value of this
+option, we claim this should not lead to unexpected behavior.
+*/
+static constexpr size_t g_kernel_rec_depth_factor = 16;
+
 void set_max_rec_depth(size_t max) { g_max_rec_depth = max; }
 size_t get_max_rec_depth() { return g_max_rec_depth; }
 
@@ -65,7 +72,7 @@ LEAN_EXPORT scope_max_rec_depth::scope_max_rec_depth(size_t max) :
 
 LEAN_EXPORT scope_rec_depth::scope_rec_depth() {
     g_rec_depth++;
-    if (g_max_rec_depth > 0 && g_rec_depth > g_max_rec_depth) {
+    if (g_max_rec_depth > 0 && g_rec_depth > g_max_rec_depth * g_kernel_rec_depth_factor) {
         g_rec_depth--;
         throw stack_space_exception("type checker");
     }
