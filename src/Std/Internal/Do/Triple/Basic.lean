@@ -60,25 +60,29 @@ private meta def hintProgram (c : Term) : MacroM Term :=
 scoped syntax:60 (name := tripleNotation) "⦃ " term " ⦄ " term " ⦃ " term " ⦄" : term
 /-- Hoare triple notation with a binder for the return value. -/
 scoped syntax:60 (name := tripleBinderNotation) "⦃ " term " ⦄ " term " ⦃ " ident ", " term " ⦄" : term
-/-- Hoare triple notation with explicit exception postconditions:
-`⦃ P ⦄ x ⦃ Q; E₁; … ⦄ := Triple x P Q epost⟨E₁, …⟩`. -/
+/-- Hoare triple notation with an exception postcondition:
+`⦃ P ⦄ x ⦃ Q; E ⦄ := Triple x P Q E`. -/
 scoped syntax:60 (name := tripleEPost)
-  "⦃ " term " ⦄ " term " ⦃ " term "; " sepBy1(term, "; ") " ⦄" : term
+  "⦃ " term " ⦄ " term " ⦃ " term "; " term " ⦄" : term
+/-- Hoare triple notation with a binder for the return value and an exception postcondition. -/
+scoped syntax:60 (name := tripleBinderEPost)
+  "⦃ " term " ⦄ " term " ⦃ " ident ", " term "; " term " ⦄" : term
 
 macro_rules (kind := tripleNotation)
   | `(⦃ $P ⦄ $c ⦃ $Q ⦄) => do `(Triple $(← hintProgram c) $P $Q Lean.Order.bot)
 macro_rules (kind := tripleBinderNotation)
   | `(⦃ $P ⦄ $c ⦃ $v, $Q ⦄) => do `(Triple $(← hintProgram c) $P (fun $v => $Q) Lean.Order.bot)
 macro_rules (kind := tripleEPost)
-  | `(⦃ $P ⦄ $c ⦃ $Q; $Es;* ⦄) => do `(Triple $(← hintProgram c) $P $Q epost⟨$Es,*⟩)
+  | `(⦃ $P ⦄ $c ⦃ $Q; $E ⦄) => do `(Triple $(← hintProgram c) $P $Q $E)
+macro_rules (kind := tripleBinderEPost)
+  | `(⦃ $P ⦄ $c ⦃ $v, $Q; $E ⦄) => do `(Triple $(← hintProgram c) $P (fun $v => $Q) $E)
 
 /-- Pretty-print `Triple` applications back as `⦃ … ⦄` notation. -/
 @[app_unexpander Triple]
 meta def unexpandTriple : Lean.PrettyPrinter.Unexpander
-  | `($(_) $c $P $Q epost⟨$Es,*⟩) =>
-    if Es.getElems.isEmpty then throw () else `(⦃ $P ⦄ $c ⦃ $Q; $Es;* ⦄)
   | `($(_) $c $P $Q ⊥) => `(⦃ $P ⦄ $c ⦃ $Q ⦄)
   | `($(_) $c $P $Q Lean.Order.bot) => `(⦃ $P ⦄ $c ⦃ $Q ⦄)
+  | `($(_) $c $P $Q $E) => `(⦃ $P ⦄ $c ⦃ $Q; $E ⦄)
   | _ => throw ()
 
 namespace Triple
